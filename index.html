@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Controle de Gastos</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>💸 Controle de Gastos</h1>
+  <div class="container">
+
+    <div class="ajuste-saldo">
+      <input type="number" id="ajuste-saldo" placeholder="Valor do ajuste no saldo" />
+      <button id="btnAddSaldo">➕ Adicionar</button>
+      <button id="btnRemoverSaldo">➖ Remover</button>
+    </div>
+
+    <input type="text" id="descricao" placeholder="Descrição do gasto" />
+    <input type="number" id="valor" placeholder="Valor do gasto (R$)" />
+    <select id="status-compra">
+      <option value="nao">❌ Ainda não comprei</option>
+      <option value="sim">✅ Já comprei</option>
+    </select>
+    <button id="btnAdicionar">📌 Adicionar Gasto</button>
+
+    <ul id="lista-gastos"></ul>
+
+    <div class="saldo">💰 Saldo disponível: R$ <span id="saldo-atual">0.00</span></div>
+    <div class="total">🧾 Total gasto (comprado): R$ <span id="total">0.00</span></div>
+  </div>
+
+  <script>
+    let gastos = JSON.parse(localStorage.getItem("gastos")) || [];
+    let saldo = parseFloat(localStorage.getItem("saldo")) || 0;
+
+    function atualizarLista() {
+      const lista = document.getElementById("lista-gastos");
+      const totalSpan = document.getElementById("total");
+      const saldoAtualSpan = document.getElementById("saldo-atual");
+
+      lista.innerHTML = "";
+      let total = 0;
+
+      gastos.forEach((item, index) => {
+        if (item.comprado) total += item.valor;
+
+        const li = document.createElement("li");
+        li.innerHTML = `
+          <div class="dados-gasto">
+            ${item.descricao} - R$ ${item.valor.toFixed(2)}
+            <span class="status">${item.comprado ? "✅ Já comprado" : "❌ Ainda não comprado"}</span>
+          </div>
+          <button class="remove-btn" onclick="removerGasto(${index})">Excluir</button>
+        `;
+        lista.appendChild(li);
+      });
+
+      totalSpan.innerText = total.toFixed(2);
+      saldoAtualSpan.innerText = saldo.toFixed(2);
+
+      localStorage.setItem("gastos", JSON.stringify(gastos));
+      localStorage.setItem("saldo", saldo.toString());
+    }
+
+    function adicionarGasto() {
+      const descricao = document.getElementById("descricao").value.trim();
+      const valor = parseFloat(document.getElementById("valor").value);
+      const status = document.getElementById("status-compra").value;
+      const comprado = status === "sim";
+
+      if (!descricao || isNaN(valor) || valor <= 0) {
+        return alert("Preencha os campos corretamente!");
+      }
+
+      if (comprado && valor > saldo) {
+        return alert("Saldo insuficiente para marcar como comprado.");
+      }
+
+      if (comprado) saldo -= valor;
+
+      gastos.push({ descricao, valor, comprado });
+
+      document.getElementById("descricao").value = "";
+      document.getElementById("valor").value = "";
+      document.getElementById("status-compra").value = "nao";
+
+      atualizarLista();
+    }
+
+    function removerGasto(index) {
+      const gasto = gastos[index];
+      if (gasto.comprado) saldo += gasto.valor;
+      gastos.splice(index, 1);
+      atualizarLista();
+    }
+
+    function ajustarSaldo(tipo) {
+      const ajusteInput = document.getElementById("ajuste-saldo");
+      const valor = parseFloat(ajusteInput.value);
+
+      if (isNaN(valor) || valor <= 0) {
+        return alert("Digite um valor válido.");
+      }
+
+      if (tipo === "adicionar") {
+        saldo += valor;
+      } else if (tipo === "remover") {
+        if (valor > saldo) return alert("Não é possível remover mais do que o saldo atual.");
+        saldo -= valor;
+      }
+
+      ajusteInput.value = "";
+      atualizarLista();
+    }
+
+    document.getElementById("btnAdicionar").addEventListener("click", adicionarGasto);
+    document.getElementById("btnAddSaldo").addEventListener("click", () => ajustarSaldo("adicionar"));
+    document.getElementById("btnRemoverSaldo").addEventListener("click", () => ajustarSaldo("remover"));
+
+    atualizarLista();
+  </script>
+</body>
+</html>
